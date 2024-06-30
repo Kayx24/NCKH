@@ -1,9 +1,19 @@
 import difflib
 import re
 
+def detect_language(file_path):
+    if file_path.endswith('.py'):
+        return 'python'
+    elif file_path.endswith('.java'):
+        return 'java'
+    elif file_path.endswith('.c') or file_path.endswith('.cpp') or file_path.endswith('.h'):
+        return 'c'
+    else:
+        return 'unknown'
+
 def read_file(file_path, language):
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r',encoding='utf-8') as file:
             content = file.read()
             # Tùy theo ngôn ngữ lập trình, loại bỏ các từ khóa tương ứng
             if language == 'python':
@@ -22,15 +32,24 @@ def read_file(file_path, language):
         print(f"Error: {file_path} not found.")
         return None
 
-# Đọc file với ngôn ngữ Python
-file1_content = read_file('D:\HOCTAP\Python\checkdaovan\data1.py', 'python')
-file2_content = read_file('D:\HOCTAP\Python\checkdaovan\data2.py', 'python')
+# Xác định ngôn ngữ của từng tệp
+file1_path = r'D:\HOCTAP\NCKH\checkdaovan\data1.py'
+file2_path = r'D:\HOCTAP\NCKH\checkdaovan\data2.py'
 
-if file1_content is not None and file2_content is not None:
-    sequence_matcher = difflib.SequenceMatcher(None, file1_content, file2_content)
-    similarity_ratio = sequence_matcher.ratio()
+file1_language = detect_language(file1_path)
+file2_language = detect_language(file2_path)
 
-    similarity_percentage = similarity_ratio * 100
-    print(f'Mức độ trùng lặp: {similarity_percentage:.2f}%')
+if file1_language == 'unknown' or file2_language == 'unknown':
+    print("Unsupported file type for comparison.")
 else:
-    print("Comparison could not be performed due to missing file content.")
+    file1_content = read_file(file1_path, file1_language)
+    file2_content = read_file(file2_path, file2_language)
+
+    if file1_content is not None and file2_content is not None:
+        sequence_matcher = difflib.SequenceMatcher(None, file1_content, file2_content)
+        similarity_ratio = sequence_matcher.ratio()
+
+        similarity_percentage = similarity_ratio * 100
+        print(f'Mức độ trùng lặp: {similarity_percentage:.2f}%')
+    else:
+        print("Comparison could not be performed due to missing file content.")

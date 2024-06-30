@@ -1,10 +1,12 @@
-def is_prime(n):
-    if n <= 1:
-        return False
-    elif n == 2:
-        return True
-    else:
-        for i in range(2, n):
-            if n % i == 0:
-                return False
-        return True
+def brute_force_algorithm(numbers):
+    # Tìm số lớn nhất bằng thuật toán vét cạn
+    max_number = numbers[0]
+    for number in numbers[1:]:
+        if number > max_number:
+            max_number = number
+    return max_number
+
+if __name__ == "__main__":
+    numbers = [10, 5, 8, 20, 2]
+    result = brute_force_algorithm(numbers)
+    print(f"Brute force algorithm result: {result}")
