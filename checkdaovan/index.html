@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Similarity Checker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Text Similarity Checker</h1>
+    </header>
+    <main>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label for="files">Upload Files:</label>
+            <input type="file" id="files" name="files" multiple required><br>
+            <button type="submit">Check Similarity</button>
+        </form>
+        <div id="fileTableContainer">
+            <table id="fileTable">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <div id="result"></div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Text Similarity Checker</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>
