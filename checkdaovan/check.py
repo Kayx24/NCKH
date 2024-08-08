@@ -1,8 +1,10 @@
 import tokenize
 from io import BytesIO
 import ast
-from collections import defaultdict
+import os
 
+# Gia thuat jaccard vs bien doi token
+#------------------------------------------------------------------------------------------------#
 def jaccard_similarity(set1, set2):
     intersection = len(set1 & set2)
     union = len(set1 | set2)
@@ -15,12 +17,23 @@ def tokenize_code(code):
         if toknum not in {tokenize.ENCODING, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT}:
             tokens.add((toknum, tokval))
     return tokens
+#------------------------------------------------------------------------------------------------#
+
+def normalize_tokens(tokens):
+    normalized_tokens = set()
+    for toknum, tokval in tokens:
+        if toknum == tokenize.NAME:
+            normalized_tokens.add((toknum, 'identifier'))
+        else:
+            normalized_tokens.add((toknum, tokval))
+    return normalized_tokens
 
 def verbatim_cloning_similarity_ratio(code1, code2):
     tokens1 = tokenize_code(code1)
     tokens2 = tokenize_code(code2)
     return jaccard_similarity(tokens1, tokens2)
 
+# Thuật toán so khớp chuỗi Knuth–Morris–Pratt (KMP)
 def kmp_search(text_tokens, pattern_tokens):
     def compute_lps(pattern):
         lps = [0] * len(pattern)
@@ -56,31 +69,12 @@ def kmp_search(text_tokens, pattern_tokens):
                 i += 1
     return False
 
-def sorted_neighborhood_comparison(blocks, window_size=3):
-    combined_results = []
-    for block in blocks:
-        block.sort(key=lambda x: x[0])
-        num_blocks = len(block)
-        for i in range(num_blocks):
-            for j in range(i + 1, min(i + window_size, num_blocks)):
-                code1, code2 = block[i][1], block[j][1]
-                tokens1 = tokenize_code(code1)
-                tokens2 = tokenize_code(code2)
-                jaccard_score = jaccard_similarity(tokens1, tokens2)
-                combined_results.append(jaccard_score)
-    return combined_results
-
-def renaming_identifier_cloning_jaccard(code_list, window_size=3):
-    blocks = defaultdict(list)
-    for code in code_list:
-        tokens = tuple(tokenize_code(code))
-        blocks[tokens].append((tokens, code))
-    
-    code_blocks = list(blocks.values())
-    results = []
-    for block in code_blocks:
-        results.extend(sorted_neighborhood_comparison([block], window_size))
-    return results
+def renaming_identifier_cloning_similarity_ratio(code1, code2):
+    tokens1 = tokenize_code(code1)
+    tokens2 = tokenize_code(code2)
+    norm_tokens1 = normalize_tokens(tokens1)
+    norm_tokens2 = normalize_tokens(tokens2)
+    return jaccard_similarity(norm_tokens1, norm_tokens2)
 
 def compare_nodes_detailed(node1, node2):
     if type(node1) != type(node2):
@@ -94,37 +88,45 @@ def compare_nodes_detailed(node1, node2):
         return node1 == node2
 
 def control_flow_restructuring_cloning_detailed(code1, code2):
-    tree1 = ast.parse(code1)
-    tree2 = ast.parse(code2)
-    return compare_nodes_detailed(tree1, tree2)
+    try:
+        tree1 = ast.parse(code1)
+        tree2 = ast.parse(code2)
+        return compare_nodes_detailed(tree1, tree2)
+    except SyntaxError:
+        return False
 
 def combined_similarity_score_detailed(code1, code2):
     tokens1 = tokenize_code(code1)
     tokens2 = tokenize_code(code2)
     verbatim_score = 1.0 if kmp_search(tokens1, tokens2) else verbatim_cloning_similarity_ratio(code1, code2)
-    renaming_scores = renaming_identifier_cloning_jaccard([code1, code2])
-    renaming_score = sum(renaming_scores) / len(renaming_scores) if renaming_scores else 0
+    renaming_score = renaming_identifier_cloning_similarity_ratio(code1, code2)
     control_flow_score = 1.0 if control_flow_restructuring_cloning_detailed(code1, code2) else 0.0
 
-    combined_score = (verbatim_score * 0.5 + renaming_score * 0.3 + control_flow_score * 0.2)
-    return combined_score * 100
+    return {
+        'verbatim': verbatim_score * 100,
+        'renaming': renaming_score * 100,
+        'restructuring': control_flow_score * 100
+    }
 
 def read_code_from_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read()
 
-file1 = "D:/HOCTAP/NCKH/checkdaovan/code1.py"
-file2 = "D:/HOCTAP/NCKH/checkdaovan/code2.py"
+def print_similarity_scores(file1, file2):
+    code1 = read_code_from_file(file1)
+    code2 = read_code_from_file(file2)
+    
+    scores = combined_similarity_score_detailed(code1, code2)
+    
+    print(f"Sao chép nguyên văn: {scores['verbatim']:.2f}%")
+    print(f"Sao chép với đổi tên định danh: {scores['renaming']:.2f}%")
+    print(f"Sao chép với tái cấu trúc luồng điều khiển: {scores['restructuring']:.2f}%")
 
-code1 = read_code_from_file(file1)
-code2 = read_code_from_file(file2)
+# Example usage
+directory_path = "D:/HOCTAP/NCKH/checkdaovan/test"
+files = [os.path.join(directory_path, f) for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
 
-print("Comparing code1 and code2:")
-combined_score1 = combined_similarity_score_detailed(code1, code2)
-print(f"Combined Similarity Score: {combined_score1:.2f}%")
-
-renaming_scores = renaming_identifier_cloning_jaccard([code1, code2])
-print("\nJaccard Similarity Scores between code1 and code2:",verbatim_cloning_similarity_ratio(code1, code2)*100 )
-
-for score in renaming_scores:
-    print(f"{score:.2f}")
+for i in range(len(files)):
+    for j in range(i + 1, len(files)):
+        print(f"\nComparing {files[i]} and {files[j]}:")
+        print_similarity_scores(files[i], files[j])
