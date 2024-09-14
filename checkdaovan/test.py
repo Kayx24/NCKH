@@ -1,12 +1,9 @@
 import ast
 import tokenize
 from io import BytesIO
-from functools import lru_cache
-from flask import Flask, request, jsonify
-import pandas as pd
 import os
-
-app = Flask(__name__)
+from functools import lru_cache
+import pandas as pd
 
 # Hàm tính tỷ lệ tương đồng Jaccard
 def jaccard_similarity(set1, set2):
@@ -149,67 +146,48 @@ def read_code_from_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read()
 
-# Tính toán ma trận tương đồng cho các file đã tải lên
+# Tính toán ma trận tương đồng và lưu vào file CSV
 def calculate_similarity_matrix(files):
     num_files = len(files)
     similarity_matrix = pd.DataFrame(index=files, columns=files)
-
+    
     for i in range(num_files):
         for j in range(i + 1, num_files):
             file1 = files[i]
             file2 = files[j]
             code1 = read_code_from_file(file1)
             code2 = read_code_from_file(file2)
-
+            
             if not code1 or not code2:
                 print(f"Lỗi: Không thể đọc mã nguồn từ file {file1} hoặc {file2}.")
                 continue
-
+            
             scores = combined_similarity_score_detailed(code1, code2)
-
+            
             similarity_matrix.at[file1, file2] = f"{scores['verbatim']:.2f},{scores['renaming']:.2f},{scores['restructuring']:.2f}"
             similarity_matrix.at[file2, file1] = similarity_matrix.at[file1, file2]
 
     return similarity_matrix
 
-# Điểm cuối API để xử lý việc tải lên file và trả về ma trận tương đồng
-@app.route('/upload', methods=['POST'])
-def upload_files():
-    files = request.files.getlist('files')
-    if not files:
-        return jsonify({'error': 'Không có file nào được tải lên'}), 400
+# Đọc danh sách file và tính toán ma trận tương đồng
+directory_path = "D:/HOCTAP/NCKH/checkdaovan/test"
+files = [os.path.join(directory_path, f) for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
+files = files[:5]  # Điều chỉnh số lượng tệp nếu cần thiết.
+similarity_matrix = calculate_similarity_matrix(files)
 
-    # Lưu các file vào thư mục tạm thời
-    file_paths = []
-    temp_dir = 'temp_uploads'
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    for file in files:
-        file_path = os.path.join(temp_dir, file.filename)
-        file.save(file_path)
-        file_paths.append(file_path)
-    
-    # Tính toán ma trận tương đồng
-    similarity_matrix = calculate_similarity_matrix(file_paths)
+# Lưu ma trận tương đồng vào file CSV với các cột riêng biệt cho từng loại tương đồng
+output_matrix = pd.DataFrame(index=files, columns=pd.MultiIndex.from_product([files, ['verbatim', 'renaming', 'restructuring']]))
 
-    # Chuẩn bị kết quả dưới dạng định dạng JSON
-    matrix_data = []
-    for i, file1 in enumerate(file_paths):
-        row = []
-        for j, file2 in enumerate(file_paths):
-            if file1 != file2:
-                verbatim, renaming, restructuring = map(float, similarity_matrix.at[file1, file2].split(','))
-                row.append({
-                    'verbatim': verbatim,
-                    'renaming': renaming,
-                    'restructuring': restructuring
-                })
-            else:
-                row.append(None)
-        matrix_data.append(row)
+for file1 in files:
+    for file2 in files:
+        if file1 != file2:
+            verbatim, renaming, restructuring = map(float, similarity_matrix.at[file1, file2].split(','))
+            output_matrix.at[file1, (file2, 'verbatim')] = verbatim
+            output_matrix.at[file1, (file2, 'renaming')] = renaming
+            output_matrix.at[file1, (file2, 'restructuring')] = restructuring
 
-    # Trả về kết quả dưới dạng JSON
-    return jsonify({'matrix': matrix_data})
+# Lưu ma trận kết quả vào file CSV
+output_matrix.to_csv('similarity_matrix.csv')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+print("Ma trận tương đồng đã được lưu vào file 'similarity_matrix.csv'.")
+print(output_matrix)
