@@ -18,8 +18,8 @@ def encode_texts(texts):
     return vectors.toarray(), vectorizer.get_feature_names_out()
 
 # Ví dụ sử dụng
-text1 = "A"
-text2 = "A"
+text1 = "tao ngu"
+text2 = "tao khon"
 
 encoded_vectors, feature_names = encode_texts([text1, text2])
 

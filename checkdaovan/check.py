@@ -82,6 +82,7 @@ def renaming_identifier_cloning_similarity_ratio(code1, code2):
     norm_tokens2 = normalize_tokens(tokens2)
     return jaccard_similarity(norm_tokens1, norm_tokens2)
 
+# sua lai AST code theo yeu cau cua thay
 def compare_nodes_detailed_with_similarity(node1, node2):
     if type(node1) != type(node2):
         return False, 0

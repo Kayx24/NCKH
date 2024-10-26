@@ -116,7 +116,7 @@ def compare_ast_nodes_cached(node1, node2):
     else:
         return node1 == node2, 1.0 if node1 == node2 else 0.0
 
-# Tỷ lệ sao chép với tái cấu trúc luồng điều khiển
+# Tỷ lệ sao chép với tái cấu trúc luồng điều khiển nhung phai kiem tra 
 def control_flow_restructuring_cloning_detailed(code1, code2):
     try:
         tree1 = ast.parse(code1)
