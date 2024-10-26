@@ -191,3 +191,6 @@ output_matrix.to_csv('similarity_matrix.csv')
 
 print("Ma trận tương đồng đã được lưu vào file 'similarity_matrix.csv'.")
 print(output_matrix)
+
+def test():
+    pass
